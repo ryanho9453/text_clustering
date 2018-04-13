@@ -39,21 +39,19 @@ main.py 為使用 options_parser 做成的執行檔
    word_id_converter{ word2id : {word: id} , id2word : { id : word } }
 
 以上檔案皆存在 config['path'] 下
-#
+
     -b , --build_and_evaluate
 讀取 term_document matrix後，建立LDA model，並使用ground truth 進行 evaluation
 ###### PS : ground_truth.json 必須放在 config['path] 的資料夾下
-#
-#
-#
+.
+
     -a, --prepare_build_and_evaluate
    結合以上兩步
-#
+
     -t , --tune_alpha_beta
  找出最佳的 alpha, beta
 ###### PS : 必須先prepare data
-#
-#
+.
 
 # 細節設定  
 修改 main.py 檔案內的config即可對上述功能做細節調整
