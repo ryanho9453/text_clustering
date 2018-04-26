@@ -10,10 +10,7 @@ Finding scientifc topics (Griffiths and Steyvers)
 
 import numpy as np
 from scipy.special import gammaln
-from tools import Timer
-
-
-
+from ..tools.tools import Timer
 
 
 def sample_index(p):
@@ -21,9 +18,10 @@ def sample_index(p):
     Sample from the Multinomial distribution and return the sample index.
     """
 
-    A = np.random.multinomial(1,p).argmax()
+    A = np.random.multinomial(1, p).argmax()
 
     return A
+
 
 def word_indices(vec):
     """
@@ -31,9 +29,11 @@ def word_indices(vec):
     of word indices. The word indices are between 0 and
     vocab_size-1. The sequence length is equal to the document length.
     """
-    for idx in vec.nonzero()[0]: # for idx in  nonzero index of 1D array ( idx 是td_matrix中 word的index, 只是這只取doc 中 nonzero 的字 )
+    # for idx in  nonzero index of 1D array ( idx 是td_matrix中 word的index, 只是這只取doc 中 nonzero 的字 )
+    for idx in vec.nonzero()[0]:
         for i in range(int(vec[idx])):  # 若 td_matrix[docj, wordi] = x , 回傳wordi x次
             yield idx
+
 
 def log_multi_beta(alpha, K=None):
     """
@@ -46,7 +46,8 @@ def log_multi_beta(alpha, K=None):
         # alpha is assumed to be a scalar
         return K * gammaln(alpha) - gammaln(K*alpha)
 
-class Lda_Colla_Gibbs_Sampler(object):
+
+class Sampler:
 
     def __init__(self, n_topics, alpha=0.1, beta=0.1):
         """
@@ -75,11 +76,11 @@ class Lda_Colla_Gibbs_Sampler(object):
             for i, w in enumerate(word_indices(matrix[m, :])):
                 # choose an arbitrary topic as first topic for word i
                 z = np.random.randint(self.n_topics)
-                self.nmz[m,z] += 1
+                self.nmz[m, z] += 1
                 self.nm[m] += 1
-                self.nzw[z,w] += 1
+                self.nzw[z, w] += 1
                 self.nz[z] += 1
-                self.topics[(m,i)] = z
+                self.topics[(m, i)] = z
 
     def _conditional_distribution(self, m, w):
         """
@@ -87,9 +88,9 @@ class Lda_Colla_Gibbs_Sampler(object):
         """
 
         vocab_size = self.nzw.shape[1]
-        left = (self.nzw[:,w] + self.beta) / \
+        left = (self.nzw[:, w] + self.beta) / \
                (self.nz + self.beta * vocab_size)
-        right = (self.nmz[m,:] + self.alpha) / \
+        right = (self.nmz[m, :] + self.alpha) / \
                 (self.nm[m] + self.alpha * self.n_topics)
         p_z = left * right
         # normalize to obtain probabilities
@@ -107,11 +108,11 @@ class Lda_Colla_Gibbs_Sampler(object):
         lik = 0
 
         for z in range(self.n_topics):
-            lik += log_multi_beta(self.nzw[z,:]+self.beta)
+            lik += log_multi_beta(self.nzw[z, :]+self.beta)
             lik -= log_multi_beta(self.beta, vocab_size)
 
         for m in range(n_docs):
-            lik += log_multi_beta(self.nmz[m,:]+self.alpha)
+            lik += log_multi_beta(self.nmz[m, :]+self.alpha)
             lik -= log_multi_beta(self.alpha, self.n_topics)
 
         return lik
@@ -142,25 +143,23 @@ class Lda_Colla_Gibbs_Sampler(object):
             print('--- start iter '+str(it))
 
             for m in range(n_docs):
-                for i, w in enumerate(word_indices(matrix[m, :])):# 在doc m下的第i個w (此處的w是td_matrix中，word的index)
-                    z = self.topics[(m,i)]
-                    self.nmz[m,z] -= 1
+                # 在doc m下的第i個w (此處的w是td_matrix中，word的index)
+                for i, w in enumerate(word_indices(matrix[m, :])):
+                    z = self.topics[(m, i)]
+                    self.nmz[m, z] -= 1
                     self.nm[m] -= 1
-                    self.nzw[z,w] -= 1
+                    self.nzw[z, w] -= 1
                     self.nz[z] -= 1
                     p_z = self._conditional_distribution(m, w)
                     z = sample_index(p_z)
 
-                    self.nmz[m,z] += 1
+                    self.nmz[m, z] += 1
                     self.nm[m] += 1
-                    self.nzw[z,w] += 1
+                    self.nzw[z, w] += 1
                     self.nz[z] += 1
-                    self.topics[(m,i)] = z
-            timer.end()
+                    self.topics[(m, i)] = z
+            timer.print_time()
             print('--- end iter')
 
             # FIXME: burn-in and lag!
             yield self.phi(), self.nmz, self.nzw
-
-
-

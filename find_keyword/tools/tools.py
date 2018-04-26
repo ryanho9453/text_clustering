@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta
 
 
-
-class Timer():
+class Timer:
     def __init__(self):
         self.now = None
 
@@ -13,7 +12,7 @@ class Timer():
         print(datetime.now() - self.now)
         self.now = datetime.now()
 
-    def end(self):
+    def print_time(self):
         print(datetime.now() - self.now)
 
 

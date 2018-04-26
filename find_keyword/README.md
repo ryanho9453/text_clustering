@@ -5,19 +5,19 @@
   - 亦可將該機率視為每個字的feature使用
 
 # 主要功能
- - term_document_matrix.py
+ - prepare_data/
   讀取文本並將其轉換成 term_document matrix 
  
- - lda_colla_gibbs_model/sampler.py
+ - lda_collapsed_gibbs/model.py
  利用 term_document matrix 算出 LDA model 下的機率分佈 
 
- - word_predictor.py
+ - lda_collapsed_gibbs/word_predictor.py
  將 p( z | w) 視為每個字的feature，用 cosine similarity 找出與目標字相似的字
 
- - evaluate_text_model.py
+ - lda_collapsed_gibbs/evaluate_text_model.py
  根據使用者自訂的 ground truth 檢驗 LDA model performance 
 
-- lda_hyper_learn_operator/manager.py
+- parameter_learn/
  找出不同 datasets 下，最佳的 LDA model hyperparameter alpha, beta 
 
 
@@ -26,7 +26,7 @@
 main.py 為使用 options_parser 做成的執行檔
 執行 flows.py 內的功能
 
-    python3 main.py < flow >
+    python3 -m find_keyword.main < flow >
 
 #### flows
 
@@ -38,12 +38,10 @@ main.py 為使用 options_parser 做成的執行檔
  - 字與id的對照表以dict的方式儲存為 word_id_converter
    word_id_converter{ word2id : {word: id} , id2word : { id : word } }
 
-以上檔案皆存在 config['path'] 下
 
     -b , --build_and_evaluate
 讀取 term_document matrix後，建立LDA model，並使用ground truth 進行 evaluation
-###### PS : ground_truth.json 必須放在 config['path] 的資料夾下
-.
+
 
     -a, --prepare_build_and_evaluate
    結合以上兩步
@@ -51,12 +49,16 @@ main.py 為使用 options_parser 做成的執行檔
     -t , --tune_alpha_beta
  找出最佳的 alpha, beta
 ###### PS : 必須先prepare data
-.
+
+### 儲存路徑
+package 將自動增加一個working directory 在 find_keyword下
+以儲存package 中產生的檔案
+working directory 的名字可以於config['wd_name']中修改
 
 # 細節設定  
 修改 main.py 檔案內的config即可對上述功能做細節調整
- - path 
-   執行過程產生的各類檔案皆儲存在 path 下
+ - wd_name 
+   working directory 的名字 ex: "WD/"
 
 - model_ver
   model version , 將會標住在model 相關的檔案檔名的後方
