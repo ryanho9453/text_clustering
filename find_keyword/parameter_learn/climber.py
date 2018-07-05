@@ -11,14 +11,21 @@ the function of climber is simple, "toward the summit" can be break into 3 parts
 repeat the process until the mobile says "goal"
 
 """
+import sys
 
-from .mobile import Mobile
-from .gps import GPS
-from .measure import Measure
-from ..prepare_data.term_document_matrix import TermDocumentMatrix
-from ..lda_collapsed_gibbs.model import LdaModel
-from ..lda_collapsed_gibbs.word_predictor import WordPredictor
-from ..lda_collapsed_gibbs.evaluate import Evaluate
+package_path = '/Users/ryanho/Documents/python/focal/text_clustering/find_keyword/'
+modules = ['lda_collapsed_gibbs/', 'parameter_learn/', 'prepare_data/']
+for module in modules:
+    sys.path.append(package_path+module)
+
+from mobile import Mobile
+from gps import GPS
+from measure import Measure
+from term_document_matrix import TermDocumentMatrix
+from model import LdaModel
+from word_predictor import WordPredictor
+from evaluate import Evaluate
+from term_similarity_matrix import TermSimilarityMatrix
 
 
 class Climber:
@@ -123,7 +130,10 @@ class Machine:
         p_zw = model.get_p_zw()
         self.maxlike = model.get_maxlike()
 
-        predictor = WordPredictor(self.config, p_zw)
+        term_similarity_matrix = TermSimilarityMatrix(self.config)
+        term_similarity_matrix.create(p_zw, save=True)
+
+        predictor = WordPredictor(self.config)
 
         evaluate = Evaluate(self.config)
         self.score = evaluate.ground_truth(predictor)

@@ -8,7 +8,7 @@ class Evaluate:
     def __init__(self, config):
         self.config = config
 
-    def ground_truth(self, predictor, window=100, save=False):
+    def ground_truth(self, predictor, save=False):
         """
 
         with a list of subjective similar words(ground truth), each time we take a different pair of words (t1, t2) ,
@@ -44,7 +44,7 @@ class Evaluate:
             exam = 0
             for word in value:
                 others = list(set(value) - set(word))
-                predict = predictor.find_similar_word(word, n_target=window)
+                predict = predictor.find_similar_word(word, n_target=self.config['n_predict_in_evaluation'])
                 # if target word is not in vocabulary, it will return None
                 if predict:
                     for other_word in others:

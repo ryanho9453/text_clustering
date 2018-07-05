@@ -1,15 +1,19 @@
+import sys
 import numpy as np
 import json
 import matplotlib.pyplot as plt
+from pprint import pprint
 
-from .sampler import Sampler
+module_path = '/Users/ryanho/Documents/python/focal/text_clustering/find_keyword/lda_collapsed_gibbs/'
+sys.path.append(module_path)
+from sampler import Sampler
 
 
 """
 watch every sampling result from lda sampler
 record the sampling performance
 update the best sampling
-get the optimal distribution 1. phi = p(w| z)  2. p_zw = p(z| w)  in 'maxiter' times sampling
+get the optimal distribution 1. phi = p(w| z)  2. pzw = p(z| w)  in 'maxiter' times sampling
 and save them to local if necessary 
 
 the optimal distribution will then be used in word_predictor   
@@ -28,14 +32,19 @@ class LdaModel:
         self.n_topics = None
 
         self.opt_phi = None    # optimal p(w| z)
-        self.opt_p_zw = None   # optimal p(z| w)
+        self.opt_pzw = None   # optimal p(z| w)
 
         self.opt_iter = None   # optimal iteration
-        self.maxlike = None   # best maximum likelihood
+        self.maxlike = None    # best maximum likelihood
 
         self.likelihood_in_iters = None
 
     def build(self, td_matrix, alpha, beta, n_topics, save_model=False):
+        """
+        run Sampler and update p(z|w) and p(w|z)
+
+        """
+
         print('build model')
 
         self._initialize()
@@ -44,7 +53,7 @@ class LdaModel:
 
         # extract 1. phi   2. nmz   3. nzw from sampler every iteration(sampling)
         # phi_nmz_nzw = (phi , nmz, nzw)  generator return a tuple for multiple values
-        for i, phi_nmz_nzw in enumerate(sampler.run(matrix=td_matrix, maxiter=self.maxiter)):
+        for i, phi_pzw in enumerate(sampler.run(matrix=td_matrix, maxiter=self.maxiter)):
             like = sampler.loglikelihood()
 
             self.likelihood_in_iters[i] = like
@@ -53,10 +62,8 @@ class LdaModel:
             if like > self.maxlike:
                 self.maxlike = like
                 self.opt_iter = i
-                self.opt_phi = phi_nmz_nzw[0]
-
-        # use the optimal phi in maxiter times sampling to calculate the optimal p(z| w)
-        self.opt_p_zw = self._calculate_p_zw(self.opt_phi, self.p_w, self.p_z)
+                self.opt_phi = phi_pzw[0]
+                self.opt_pzw = phi_pzw[1]
 
         if save_model is True:
             self._save_lda_model()
@@ -71,7 +78,7 @@ class LdaModel:
 
         """
 
-        return self.opt_p_zw   # p_zw.shape(w, z)
+        return self.opt_pzw   # p_zw.shape(w, z)
 
     def get_p_wz(self):
         """
@@ -104,16 +111,41 @@ class LdaModel:
         plt.ylabel('loglikelihood')
         plt.show()
 
-    def _initialize(self):
-        self.p_w = np.load(self.config['path'] + 'p_w.npy')
-        self.p_z = 1 / self.config['n_topics']
+    def show_word_topic_distribution(self, word):
+        p_zw = np.load(self.config['path'] + 'p_zw' + self.config['model_ver'] + '.npy')
 
+        with open(self.config['path'] + 'word_id_converter.json', 'r', encoding='utf8') as f:
+            word_id_converter = json.load(f)
+
+        word2id = word_id_converter['word2id']
+
+        word_distribution = dict()
+        if type(word) is list:
+            for w in word:
+                if w in word2id.keys():
+                    wordid = word2id[w]
+                    distribution = p_zw[wordid, :]
+                    word_distribution[w] = distribution
+
+                else:
+                    print(str(w)+' not in dictionary')
+
+        elif type(word) is str:
+            if word in word2id.keys():
+                wordid = word2id[word]
+                distribution = p_zw[wordid, :]
+                word_distribution[word] = distribution
+
+            else:
+                print(str(word) + ' not in dictionary')
+
+        pprint(word_distribution)
+
+    def _initialize(self):
         self.maxlike = -1*10**100
         self.opt_iter = 0
 
         self.opt_phi = np.arange(1)
-        self.opt_nmz = np.arange(1)
-        self.opt_nzw = np.arange(1)  # p(z|w)
 
         self.likelihood_in_iters = dict()
 
@@ -128,16 +160,4 @@ class LdaModel:
             json.dump(model_info, f)
 
         np.save(self.config['path'] + 'p_wz' + self.config['model_ver'] + '.npy', self.opt_phi)
-        np.save(self.config['path'] + 'p_zw' + self.config['model_ver'] + '.npy', self.opt_p_zw)
-
-    def _calculate_p_zw(self, phi, p_w, p_z):
-
-        """
-            phi.shape (z, w)  p_w.shape (1, w)  p_z = int
-
-            p_zw.shape(w, z)  been transposed
-
-        """
-        p_zw = phi * p_z / p_w
-
-        return p_zw.T
+        np.save(self.config['path'] + 'p_zw' + self.config['model_ver'] + '.npy', self.opt_pzw)

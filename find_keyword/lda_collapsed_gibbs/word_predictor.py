@@ -1,6 +1,6 @@
-from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import json
+from pprint import pprint
 
 """
 with given word, find similar words
@@ -10,10 +10,11 @@ use cosine similarity
 
 
 class WordPredictor:
-    def __init__(self, config, term_feature_maxtrix):
+    def __init__(self, config, term_similarity_matrix=True):
         self.config = config
 
-        self.tt_sim_matrix = self._tt_similarity_matrix(term_feature_maxtrix)
+        if term_similarity_matrix:
+            self.t_sim_matrix = np.load(self.config['path'] + 'term_similarity_matrix' + self.config['model_ver'] + '.npy')
 
         with open(self.config['path'] + 'word_id_converter.json', 'r', encoding='utf8') as f:
             self.word_id_converter = json.load(f)
@@ -23,36 +24,50 @@ class WordPredictor:
         :param n_target: number of similar words return
 
         """
-
         word2id = self.word_id_converter['word2id']
         id2word = self.word_id_converter['id2word']
-        wordlist = []
-        if word in word2id.keys():
-            wordid = word2id[word]
-            tt_sim = self.tt_sim_matrix[wordid, :]
-            top_wordid = np.argsort(tt_sim)[- 1 * n_target:][::-1]
-            for i in list(top_wordid):
-                wordlist.append(id2word[str(i)])
 
-            return wordlist
+        result_dict = dict()
+
+        if type(word) is str:
+            if word in word2id.keys():
+                wordid = word2id[word]
+                tt_sim = self.t_sim_matrix[wordid, :]
+                n_target_plus_itself = n_target + 1
+                top_wordid = list(np.argsort(tt_sim)[- 1 * n_target_plus_itself:][::-1])
+                top_wordid.remove(wordid)
+
+                wordlist = list()
+                for i in top_wordid:
+                    wordlist.append(id2word[str(i)])
+
+                result_dict[word] = wordlist
+
+                return result_dict
+
+            else:
+                print(str(word)+' not in dictionary')
+
+        elif type(word) is list:
+            for w in word:
+                if w in word2id.keys():
+                    wordid = word2id[w]
+                    tt_sim = self.t_sim_matrix[wordid, :]
+                    n_target_plus_itself = n_target + 1
+                    top_wordid = list(np.argsort(tt_sim)[- 1 * n_target_plus_itself:][::-1])
+                    if wordid in top_wordid:
+                        top_wordid.remove(wordid)
+
+                    wordlist = list()
+                    for i in top_wordid:
+                        wordlist.append(id2word[str(i)])
+
+                    result_dict[w] = wordlist
+
+                else:
+                    print(str(w) + ' not in dictionary')
+
+            return result_dict
+
         else:
-
-            return None
-
-    def _tt_similarity_matrix(self, term_feature_maxtrix, save=False):
-        """
-        term to term similarity matrix
-
-        use terms' feature to calcualte cosine similarity between words
-
-        tt_similarity.shape(n_words, n_words)
-
-        similarity between john, mary = tt_similarity[johnid, maryid] = tt_similarity[maryid, johnid]
-
-        """
-        tt_similarity_matrix = cosine_similarity(term_feature_maxtrix, term_feature_maxtrix)
-
-        if save is True:
-            np.save(self.config['path'] + 'tt_similarity_matrix' + self.config['model_ver'] + '.npy', tt_similarity_matrix)
-
-        return tt_similarity_matrix
+            print('input must be string or list')
